@@ -2,7 +2,10 @@ package com.example.demo.services;
 
 import java.util.List;
 
+import com.example.demo.model.Photo;
+import com.example.demo.model.DTO.FaceTagDTO;
 import com.example.demo.model.DTO.TagDTO;
+import com.example.demo.model.DTO.TagnameAndIdDTO;
 
 public interface TagService {
     
@@ -13,4 +16,6 @@ public interface TagService {
      * @param tagNames
      */
     public void createTags(List<TagDTO> tagNames);
+    public void createFaceTag(FaceTagDTO faceTag, Photo photo);
+    public List<TagnameAndIdDTO> fetchTagsByPhoto(long id);
 }

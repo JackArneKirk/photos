@@ -36,6 +36,7 @@ import com.example.demo.model.Photo;
 import com.example.demo.model.DTO.GeoResponseDTO;
 import com.example.demo.model.DTO.PhotoDto;
 import com.example.demo.model.DTO.TagDTO;
+import com.example.demo.model.DTO.TagnameAndIdDTO;
 import com.example.demo.services.FaceService;
 import com.example.demo.services.KeywordService;
 import com.example.demo.services.PhotoService;
@@ -214,4 +215,17 @@ public class AssetControllerImpl implements AssetController {
         }
         return ResponseEntity.ok().body(String.join(", ", keywords));  
     }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<TagnameAndIdDTO>>getTags(@RequestParam(required = true) long photoID){
+        return ResponseEntity.ok().body(tagService.fetchTagsByPhoto(photoID));
+    }
+
+    @PostMapping("/person/name")
+    public ResponseEntity<?> setName(@RequestParam(required = true) long personID, @RequestParam(required = true) String name){
+        //TODO - error handling + more useful response
+        faceService.setName(personID, name);
+        return ResponseEntity.ok().build();
+    }
+
 }

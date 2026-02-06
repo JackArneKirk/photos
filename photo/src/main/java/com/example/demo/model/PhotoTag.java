@@ -1,5 +1,7 @@
 package com.example.demo.model;
 
+import org.hibernate.annotations.Check;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,7 +17,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"photo_id", "keyword_id", "x", "y"}), name = "PhotoTag")
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"photo_id", "keyword_id"}), 
+        name = "PhotoTag")
+@Check(constraints = "keyword_id IS NOT NULL OR person_id IS NOT NULL")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -27,8 +31,12 @@ public class PhotoTag {
     private Long id;
 
     @JoinColumn(name = "keyword_id")
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = true)
     private Keyword keyword;
+
+    @JoinColumn(name = "person_id")
+    @ManyToOne(optional = true)
+    private Person person;
 
     @JoinColumn(name = "photo_id")
     @ManyToOne(optional = false)
@@ -38,5 +46,4 @@ public class PhotoTag {
     private float xNorm;
     @Column(name = "y")
     private float yNorm;
-
 }

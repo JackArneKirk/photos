@@ -9,12 +9,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.model.Keyword;
+import com.example.demo.model.Person;
 import com.example.demo.model.Photo;
 import com.example.demo.model.PhotoTag;
+import com.example.demo.model.DTO.FaceTagDTO;
 import com.example.demo.model.DTO.TagDTO;
+import com.example.demo.model.DTO.TagnameAndIdDTO;
 import com.example.demo.repository.KeywordRepository;
 import com.example.demo.repository.PhotoRepository;
 import com.example.demo.repository.PhotoTagRepository;
+import com.example.demo.services.FaceService;
 import com.example.demo.services.KeywordService;
 import com.example.demo.services.TagService;
 
@@ -28,6 +32,9 @@ public class TagServiceImpl implements TagService {
     private PhotoTagRepository tagRepo;
     private PhotoRepository photoRepo;
     private KeywordRepository keywordRepo;
+
+    @Autowired
+    private FaceService faceService;
 
     @Autowired
     private KeywordService keywordService;
@@ -49,6 +56,17 @@ public class TagServiceImpl implements TagService {
         });
     }
 
+    @Override
+    public void createFaceTag(FaceTagDTO faceTag, Photo photo) {
+        PhotoTag tag = new PhotoTag();
+        Person person = faceService.findPerson(faceTag.getId()).orElseThrow();
+        tag.setPerson(person);
+        tag.setXNorm(faceTag.getXNorm());
+        tag.setYNorm(faceTag.getYNorm());
+        tag.setPhoto(photo);
+        tagRepo.save(tag);
+    }
+
     private void createTag(TagDTO tag) {
         Photo photo = photoRepo.findById(tag.getPhotoID()).orElseThrow();
         Keyword keyword = keywordRepo.findById(tag.getKeywordID()).orElseThrow();
@@ -67,19 +85,24 @@ public class TagServiceImpl implements TagService {
         for (String keywordTitle : tag.getTagNames()) {
             log.info("{} -- {} keyword name: {}", LOG_PREFIX, CLASS_NAME, keywordTitle);
             Optional<Keyword> keyword = keywordRepo.findFirstByName(keywordTitle);
-            keyword.ifPresentOrElse(key -> {
-                PhotoTag newTag = new PhotoTag();
-                newTag.setKeyword(key);
-                newTag.setPhoto(photo);
-                tagRepo.save(newTag);
-            },
-                    () -> {
-                        Keyword createdKeyword = keywordService.createKeyword(keywordTitle);
-                        PhotoTag newTag = new PhotoTag();
-                        newTag.setKeyword(createdKeyword);
-                        newTag.setPhoto(photo);
-                        tagRepo.save(newTag);
-                    });
+            keyword.ifPresentOrElse(key -> saveTag(key, photo),
+                () -> {
+                    Keyword createdKeyword = keywordService.createKeyword(keywordTitle);
+                    saveTag(createdKeyword, photo);
+                });
         }
+    }
+
+    private void saveTag(Keyword keyword, Photo photo) {
+        PhotoTag newTag = new PhotoTag();
+        newTag.setKeyword(keyword);
+        newTag.setPhoto(photo);
+        tagRepo.save(newTag);
+    }
+
+    @Override
+    public List<TagnameAndIdDTO> fetchTagsByPhoto(long id) {
+        //TODO - add checks perhaps? 
+        return tagRepo.getTagNames(id);
     }
 }

@@ -1,7 +1,5 @@
 package com.example.demo.model;
 
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,5 +27,7 @@ public class Keyword {
     private String name;
     private Boolean isPerson = false;
     @Column(name = "user_id")
-    private String userID;
+    private String userID; //relates to the user that made the tag
+    @Column(name = "person_id")
+    private long personID; //if isPewrson = true, relates to the person tagged in the photo
 }

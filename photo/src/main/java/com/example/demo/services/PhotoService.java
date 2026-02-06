@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static com.example.demo.constant.Constant.LOG_PREFIX;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.model.Photo;
+import com.example.demo.model.DTO.FaceTagDTO;
 import com.example.demo.model.DTO.GeoDataDTO;
 import com.example.demo.model.DTO.GeoResponseDTO;
 import com.example.demo.repository.PhotoRepository;
@@ -53,6 +55,9 @@ public class PhotoService {
     @Autowired
     private FaceService faceService;
 
+    @Autowired
+    private TagService tagService;
+
     public PhotoService(PhotoRepository repo) {
         this.repo = repo;
     }
@@ -73,10 +78,16 @@ public class PhotoService {
         setSize(photo, file);
         try {
             file.transferTo(new File(rootFolderPath + "/" + photo.getFileName()));
-            repo.save(photo); // TODO - do something with response
+            repo.save(photo); // TODO - do something with response (happy vs non-happy path)
             thumbnailService.createThumbnail(photo);
             metadataService.processAndStoreMetadata(photo, repo);
-            faceService.detectFace(photo);
+            CompletableFuture<List<FaceTagDTO>> foundFaces = faceService.detectFaces(photo);
+            log.info("FACES DETECTED!");
+            foundFaces.whenComplete((list, status) -> {
+                log.info("Tagging #{} faces...", list.size());
+                list.forEach(x -> System.out.println("Photo ID when adding tag: " + photo.getId()));
+                list.forEach(tag -> tagService.createFaceTag(tag, photo));
+            });
 
         } catch (OptimisticLockingFailureException | IllegalArgumentException e) {
             log.error("{} -- {} occurred when trying to save asset metadata to database", CLASS_NAME,

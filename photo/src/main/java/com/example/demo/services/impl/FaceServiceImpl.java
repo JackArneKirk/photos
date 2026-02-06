@@ -10,12 +10,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import com.example.demo.model.Face;
 import com.example.demo.model.Person;
 import com.example.demo.model.Photo;
+import com.example.demo.model.DTO.FaceTagDTO;
 import com.example.demo.model.DTO.PersonEmbeddingDTO;
 import com.example.demo.model.DTO.PersonMatchLikelihoodDTO;
 import com.example.demo.repository.FaceRepository;
@@ -66,7 +67,8 @@ public class FaceServiceImpl implements FaceService {
 
     @Async
     @Override
-    public void detectFace(Photo photo) {
+    public CompletableFuture<List<FaceTagDTO>> detectFaces(Photo photo) {
+        List<FaceTagDTO> facesToTag = new ArrayList<>();
         OpenCV.loadShared();
         Mat loadedImage = Imgcodecs.imread(rootFolderPath + "/" + photo.getFileName());
         MatOfRect facesDetected = new MatOfRect();
@@ -92,9 +94,17 @@ public class FaceServiceImpl implements FaceService {
             Face newFace = createEmbedding(croppedImage, photo);
             if (newFace != null) {
                 Optional<Person> personOptional = matchFaceToPerson(newFace);
-                //personOptional.ifPresent(p -> p.)
+                personOptional.ifPresent(p -> {
+                    FaceTagDTO faceTag = new FaceTagDTO();
+                    faceTag.setId(p.getId());
+                    faceTag.setXNorm((float) face.x / loadedImage.width());
+                    faceTag.setYNorm((float) face.y / loadedImage.height());
+                    facesToTag.add(faceTag);
+                });
             }
         }
+        log.info("FACES TO TAG: {}", facesToTag.size());
+        return CompletableFuture.completedFuture(facesToTag);
     }
 
     @Override
@@ -130,6 +140,11 @@ public class FaceServiceImpl implements FaceService {
         float similarity = calculSimilar(face1.getEmbedding(), face2.getEmbedding());
         log.info("face1 and face2 share {} similarity.", similarity);
         return similarity;
+    }
+
+    @Override
+    public Optional<Person> findPerson(long id) {
+        return personRepo.findById(id);
     }
 
     private float[] extractFeatures(Image img)
@@ -229,6 +244,7 @@ public class FaceServiceImpl implements FaceService {
             if (topCandidate.isPresent()) {
                 Person personToSet = personRepo.findById(topCandidate.get().getId()).orElseThrow();
                 faceToMatch.setPerson(personToSet);
+                personOptional = Optional.of(personToSet);
             } else {
                 createAndSetNewPerson(faceToMatch);
             }
@@ -242,7 +258,7 @@ public class FaceServiceImpl implements FaceService {
         return candidates.stream()
                 .map(candidate -> new PersonMatchLikelihoodDTO(candidate.getId(),
                         performHighIntensityMatching(candidate.getId(), faceToMatch.getEmbedding())))
-                .filter(matchCandidate -> matchCandidate.getFaceMatch() > 0.7) //TODO - 0.7 is arbitrary
+                .filter(matchCandidate -> matchCandidate.getFaceMatch() > 0.7) // TODO - 0.7 is arbitrary
                 .sorted()
                 .findFirst();
     }
@@ -251,7 +267,8 @@ public class FaceServiceImpl implements FaceService {
         return people.stream()
                 .map(person -> new PersonMatchLikelihoodDTO(person.getId(),
                         calculSimilar(person.getCentralEmbedding(), faceToMatch.getEmbedding())))
-                .filter(matchProbability -> matchProbability.getFaceMatch() > 0.5f) //TODO - 0.5f is arbitrary - will need something cleverer
+                .filter(matchProbability -> matchProbability.getFaceMatch() > 0.5f) // TODO - 0.5f is arbitrary - will
+                                                                                    // need something cleverer
                 .collect(Collectors.toList());
     }
 
@@ -273,5 +290,14 @@ public class FaceServiceImpl implements FaceService {
         personToAdd.setAggregateEmbedding(faceToMatch.getEmbedding());
         personRepo.save(personToAdd);
         faceToMatch.setPerson(personToAdd);
+    }
+
+    @Override
+    public void setName(long id, String name) {
+        Optional<Person> person = personRepo.findById(id);
+        person.ifPresent(p -> {
+            p.setName(name);
+            personRepo.save(p);
+        });
     }
 }
