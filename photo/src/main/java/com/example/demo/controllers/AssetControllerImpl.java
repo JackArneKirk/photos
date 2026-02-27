@@ -34,11 +34,13 @@ import org.springframework.web.servlet.HandlerMapping;
 
 import com.example.demo.model.Photo;
 import com.example.demo.model.DTO.GeoResponseDTO;
+import com.example.demo.model.DTO.PersonPhotoDTO;
 import com.example.demo.model.DTO.PhotoDto;
 import com.example.demo.model.DTO.TagDTO;
 import com.example.demo.model.DTO.TagnameAndIdDTO;
 import com.example.demo.services.FaceService;
 import com.example.demo.services.KeywordService;
+import com.example.demo.services.PersonService;
 import com.example.demo.services.PhotoService;
 import com.example.demo.services.TagService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -63,6 +65,9 @@ public class AssetControllerImpl implements AssetController {
 
     @Autowired
     private FaceService faceService;
+
+    @Autowired
+    private PersonService personService;
 
     @Value("${file.upload-dir}")
     private String rootFolderPath;
@@ -208,24 +213,32 @@ public class AssetControllerImpl implements AssetController {
     }
 
     @GetMapping("/photo/keywords")
-    public ResponseEntity<?> getKeywords(@RequestParam long photoID){
+    public ResponseEntity<?> getKeywords(@RequestParam long photoID) {
         List<String> keywords = keywordService.getKeywords(photoID);
-        if(keywords == null){
+        if (keywords == null) {
             return ResponseEntity.badRequest().body("invalid ID");
         }
-        return ResponseEntity.ok().body(String.join(", ", keywords));  
+        return ResponseEntity.ok().body(String.join(", ", keywords));
     }
 
     @GetMapping("/tags")
-    public ResponseEntity<List<TagnameAndIdDTO>>getTags(@RequestParam(required = true) long photoID){
+    public ResponseEntity<List<TagnameAndIdDTO>> getTags(@RequestParam(required = true) long photoID) {
         return ResponseEntity.ok().body(tagService.fetchTagsByPhoto(photoID));
     }
 
     @PostMapping("/person/name")
-    public ResponseEntity<?> setName(@RequestParam(required = true) long personID, @RequestParam(required = true) String name){
-        //TODO - error handling + more useful response
+    public ResponseEntity<?> setName(@RequestParam(required = true) long personID,
+            @RequestParam(required = true) String name) {
+        // TODO - error handling + more useful response
         faceService.setName(personID, name);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/person/unnamed")
+    public ResponseEntity<List<PersonPhotoDTO>> getUnnamed() {
+        // TODO - error handling + more useful response
+        List<PersonPhotoDTO> unnamedPeople = personService.findUnnamedPeople();
+        return ResponseEntity.ok().body(unnamedPeople);
     }
 
 }

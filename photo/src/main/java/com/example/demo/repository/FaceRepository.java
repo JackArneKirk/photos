@@ -12,5 +12,4 @@ public interface FaceRepository extends JpaRepository<Face, Long> {
 
     @Query("SELECT f.embedding FROM Face f WHERE f.person.id = :personID")
     public List<float[]> findEmbeddingsByPerson(@Param("personID") long personID);
-
 }

@@ -15,4 +15,8 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 
     @Query("SELECT new com.example.demo.model.DTO.PersonEmbeddingDTO(p.id, p.aggregateEmbedding) FROM Person p")
     public List<PersonEmbeddingDTO> getIDsAndEmbeddings();
+
+    @Query("SELECT p FROM Person p WHERE p.name IS NULL")
+    public List<Person> findPeopleWithNoName(); 
+    
 }
